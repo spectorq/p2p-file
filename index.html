@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DropShare | Минималистичная передача данных</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --card-bg: #1a1a1a;
+            --border-color: #333333;
+            --text-main: #ffffff;
+            --text-muted: #888888;
+            --accent: #ffffff;
+            --accent-hover: #cccccc;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: 0.3s;
+            font-weight: 500;
+        }
+        .tab.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+        }
+
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        input[type="text"], input[type="password"], textarea {
+            width: 100%;
+            padding: 14px;
+            background-color: #121212;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-family: 'Montserrat', sans-serif;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus { border-color: #666; }
+        textarea { resize: vertical; min-height: 80px; }
+
+        /* File Dropzone */
+        .dropzone {
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            background-color: #121212;
+            margin-bottom: 20px;
+        }
+        .dropzone:hover {
+            border-color: #555;
+            background-color: #161616;
+        }
+        .dropzone input[type="file"] { display: none; }
+        .dropzone svg {
+            width: 40px;
+            height: 40px;
+            fill: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .file-list {
+            margin-top: 15px;
+            font-size: 13px;
+            color: var(--text-muted);
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #222;
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--accent);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-family: 'Montserrat', sans-serif;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+
+        /* Status */
+        .status-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #121212;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+            word-break: break-all;
+        }
+        .status-text { margin-bottom: 10px; font-weight: 500; }
+        .error-text { color: #ff5555; margin-top: 10px; font-size: 12px; }
+        .copy-link {
+            color: #fff;
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* Receiver UI */
+        .received-text-box {
+            background-color: #121212;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            display: none;
+            white-space: pre-wrap;
+            font-size: 14px;
+        }
+        .received-file {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #121212;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+        }
+        .received-file span {
+            font-size: 13px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 70%;
+        }
+        .download-btn {
+            background-color: #333;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+        .download-btn:hover { background-color: #555; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>DropShare</h1>
+
+    <div class="tabs">
+        <div class="tab active" id="tab-btn-send" onclick="switchTab('send')">Отправить</div>
+        <div class="tab" id="tab-btn-receive" onclick="switchTab('receive')">Получить</div>
+    </div>
+
+    <!-- Вкладка ОТПРАВИТЬ -->
+    <div id="view-send">
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+            </svg>
+            <div style="font-size: 14px; color: #fff; font-weight: 500;">Выберите файлы (до 250)</div>
+            <div style="font-size: 12px; margin-top: 5px;">или перетащите их сюда</div>
+            <input type="file" id="file-input" multiple>
+        </div>
+        <div class="file-list" id="file-list-preview"></div>
+
+        <div class="form-group">
+            <textarea id="sender-text" placeholder="Добавьте текст или заметку (необязательно)..."></textarea>
+        </div>
+        <div class="form-group">
+            <input type="password" id="sender-password" placeholder="Задать пароль (необязательно)">
+        </div>
+
+        <button class="btn" id="btn-start-share">Создать ссылку / Поделиться</button>
+
+        <div class="status-box" id="sender-status-box">
+            <div class="status-text" id="sender-status-text">Создание P2P подключения...</div>
+            <div class="error-text" id="sender-error"></div>
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+                Поделитесь этой ссылкой с получателем:
+            </div>
+            <input type="text" id="share-link" readonly onclick="this.select()" style="margin-bottom: 10px; font-size: 12px;">
+            <div class="copy-link" onclick="copyLink()">Скопировать ссылку</div>
+            <div style="margin-top: 15px; font-size: 11px; color: #ff5555;">⚠️ Не закрывайте эту вкладку, пока друг не скачает файлы!</div>
+        </div>
+    </div>
+
+    <!-- Вкладка ПОЛУЧИТЬ -->
+    <div id="view-receive" style="display: none;">
+        <div id="receive-connect-ui">
+            <div class="form-group">
+                <label>Вставьте ссылку или ID</label>
+                <input type="text" id="receiver-id" placeholder="Например: a1b2c3d4e5">
+            </div>
+            <button class="btn" id="btn-connect">Подключиться</button>
+        </div>
+
+        <div class="status-box" id="receiver-status-box" style="display: none; margin-top: 0;">
+            <div class="status-text" id="receiver-status-text">Подключение...</div>
+            <div class="error-text" id="receiver-error"></div>
+        </div>
+
+        <div id="received-content" style="display: none; margin-top: 20px;">
+            <div class="received-text-box" id="received-text"></div>
+            <div id="received-files-list"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Настройки серверов (Помогает пробить NAT/Роутеры)
+    const peerOptions = {
+        config: {
+            'iceServers':[
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        }
+    };
+
+    let peer = null;
+    let activeConnection = null;
+    let selectedFiles =[];
+    const MAX_FILES = 250;
+
+    // UI Переключение
+    function switchTab(tab) {
+        document.getElementById('view-send').style.display = tab === 'send' ? 'block' : 'none';
+        document.getElementById('view-receive').style.display = tab === 'receive' ? 'block' : 'none';
+        document.getElementById('tab-btn-send').className = tab === 'send' ? 'tab active' : 'tab';
+        document.getElementById('tab-btn-receive').className = tab === 'receive' ? 'tab active' : 'tab';
+    }
+
+    // Авто-коннект по ссылке
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const receiveId = urlParams.get('id');
+        if (receiveId) {
+            switchTab('receive');
+            document.getElementById('receiver-id').value = receiveId;
+            startReceiving(receiveId);
+        }
+    };
+
+    // --- ОТПРАВИТЕЛЬ ---
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        let files = Array.from(e.target.files);
+        if (files.length > MAX_FILES) files = files.slice(0, MAX_FILES);
+        selectedFiles = files;
+        
+        const preview = document.getElementById('file-list-preview');
+        preview.innerHTML = '';
+        selectedFiles.forEach(f => {
+            preview.innerHTML += `<div class="file-item"><span>${f.name}</span><span>${(f.size/1024/1024).toFixed(2)} MB</span></div>`;
+        });
+    });
+
+    document.getElementById('btn-start-share').addEventListener('click', () => {
+        document.getElementById('sender-status-box').style.display = 'block';
+        document.getElementById('sender-error').innerText = '';
+        
+        if (!peer) {
+            peer = new Peer(peerOptions);
+            
+            peer.on('open', (id) => {
+                const link = `${window.location.href.split('?')[0]}?id=${id}`;
+                document.getElementById('share-link').value = window.location.protocol === 'file:' ? id : link;
+                document.getElementById('sender-status-text').innerText = 'Ждем получателя... (не закрывайте сайт)';
+            });
+
+            peer.on('connection', (conn) => {
+                activeConnection = conn;
+                document.getElementById('sender-status-text').innerText = 'Получатель подключен! Синхронизация...';
+                
+                const password = document.getElementById('sender-password').value;
+
+                conn.on('data', (data) => {
+                    if (data.type === 'hello') {
+                        if (password) {
+                            conn.send({ type: 'auth_request' });
+                        } else {
+                            conn.send({ type: 'auth_success' });
+                            sendAllData(conn);
+                        }
+                    } else if (data.type === 'auth_attempt') {
+                        if (data.password === password) {
+                            conn.send({ type: 'auth_success' });
+                            sendAllData(conn);
+                        } else {
+                            conn.send({ type: 'auth_fail' });
+                        }
+                    }
+                });
+            });
+
+            peer.on('error', (err) => {
+                document.getElementById('sender-error').innerText = 'Ошибка: ' + err.type;
+            });
+        }
+    });
+
+    async function sendAllData(conn) {
+        document.getElementById('sender-status-text').innerText = 'Отправка данных... НЕ ЗАКРЫВАЙТЕ ОКНО!';
+        
+        conn.send({ type: 'metadata', text: document.getElementById('sender-text').value });
+
+        // Передача напрямую без загрузки в ОЗУ
+        for (let file of selectedFiles) {
+            conn.send({
+                type: 'file',
+                name: file.name,
+                filetype: file.type,
+                data: file 
+            });
+        }
+        
+        setTimeout(() => {
+            document.getElementById('sender-status-text').innerText = 'Успешно! Все файлы доставлены получателю.';
+            conn.send({ type: 'done' });
+        }, 1000);
+    }
+
+    function copyLink() {
+        document.getElementById('share-link').select();
+        document.execCommand('copy');
+        alert('Скопировано!');
+    }
+
+    // --- ПОЛУЧАТЕЛЬ ---
+    document.getElementById('btn-connect').addEventListener('click', () => {
+        let inputId = document.getElementById('receiver-id').value.trim();
+        if (inputId.includes('?id=')) inputId = inputId.split('?id=')[1];
+        if (inputId) startReceiving(inputId);
+    });
+
+    function startReceiving(hostId) {
+        document.getElementById('receive-connect-ui').style.display = 'none';
+        document.getElementById('receiver-status-box').style.display = 'block';
+        document.getElementById('receiver-status-text').innerText = 'Подключение к отправителю...';
+        document.getElementById('receiver-error').innerText = '';
+
+        if (!peer) peer = new Peer(peerOptions);
+
+        peer.on('open', () => {
+            const conn = peer.connect(hostId, { reliable: true });
+            activeConnection = conn;
+
+            conn.on('open', () => {
+                // Задержка рукопожатия, чтобы отправитель 100% успел подготовиться
+                setTimeout(() => { conn.send({ type: 'hello' }); }, 800);
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'auth_request') {
+                    const pass = prompt('Файлы защищены паролем. Введите пароль:');
+                    conn.send({ type: 'auth_attempt', password: pass });
+                } 
+                else if (data.type === 'auth_fail') {
+                    alert('Неверный пароль!');
+                    const pass = prompt('Повторите пароль:');
+                    conn.send({ type: 'auth_attempt', password: pass });
+                } 
+                else if (data.type === 'auth_success') {
+                    document.getElementById('receiver-status-text').innerText = 'Скачивание данных...';
+                    document.getElementById('received-content').style.display = 'block';
+                } 
+                else if (data.type === 'metadata') {
+                    if (data.text) {
+                        const textBox = document.getElementById('received-text');
+                        textBox.style.display = 'block';
+                        textBox.innerText = data.text;
+                    }
+                } 
+                else if (data.type === 'file') {
+                    const blob = new Blob([data.data], { type: data.filetype });
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    document.getElementById('received-files-list').innerHTML += `
+                        <div class="received-file">
+                            <span>${data.name}</span>
+                            <a href="${url}" download="${data.name}" class="download-btn">Скачать</a>
+                        </div>
+                    `;
+                }
+                else if (data.type === 'done') {
+                    document.getElementById('receiver-status-text').innerText = 'Готово! Файлы успешно получены.';
+                }
+            });
+
+            conn.on('close', () => {
+                document.getElementById('receiver-error').innerText = 'Отправитель закрыл соединение.';
+            });
+        });
+
+        peer.on('error', (err) => {
+            if (err.type === 'peer-unavailable') {
+                document.getElementById('receiver-error').innerText = 'Отправитель не найден. Убедитесь, что он не закрыл вкладку сайта!';
+            } else {
+                document.getElementById('receiver-error').innerText = 'Ошибка: ' + err.type;
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
